@@ -1,50 +1,137 @@
-# Welcome to your Expo app 👋
+# BillGuard (Expo + Supabase MVP)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Mobile-first BillGuard app with Supabase auth, bills CRUD, dynamic categories, and user currency preference.
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 1) Install and run
 
 ```bash
-npm run reset-project
+cd /Users/melissa/billguard
+npm install
+cp .env.example .env
+npm run start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Optional:
 
-## Learn more
+```bash
+npm run ios
+npm run android
+npm run web
+npm run lint
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## 2) Environment variables
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Add these to `.env` in the project root:
 
-## Join the community
+```bash
+EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+```
 
-Join our community of developers creating universal apps.
+Where to find them:
+- Supabase Dashboard -> Project Settings -> API
+- Copy `Project URL` into `EXPO_PUBLIC_SUPABASE_URL`
+- Copy `anon public` key into `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 3) Database schema and seed
+
+Run SQL from:
+- `supabase/schema.sql`
+
+It creates/updates MVP tables:
+- `profiles`
+- `bill_categories`
+- `bills`
+- `payments` (includes `month_reference`)
+
+It also includes:
+- `profiles.currency_code` (user preferred currency)
+
+It also inserts starter categories:
+- Utilities
+- Rent
+- Subscriptions
+- Loans
+- Insurance
+- Credit Cards
+
+## 4) Current app behavior
+
+- Signup/Login screens are connected to Supabase email/password auth.
+- Profile screen can log out.
+- Profile screen can update preferred currency.
+- Session persistence is enabled through Supabase auth config.
+- If env vars are missing, app still boots and shows safe alerts instead of crashing.
+- Bills list/add/details/edit/delete are connected to Supabase.
+- Bill categories dropdown is loaded from Supabase `bill_categories` (with local fallback).
+
+## 5) Scope boundaries
+
+Implemented now:
+- Supabase client foundation
+- Auth integration (signup/login/logout)
+- Route/session handling for auth vs app screens
+- Bills CRUD
+- Dynamic bill categories
+- Currency preference + amount formatting
+
+Phase 2:
+- Form schema validation
+- Notifications/reminders
+
+## 6) Release checklist (EAS deployment)
+
+Prerequisites:
+- Expo account + `eas-cli` installed
+- App icon and splash already configured in `app.json`
+- Supabase production project ready
+
+### One-time setup
+
+```bash
+npm install -g eas-cli
+eas login
+eas init
+```
+
+### Set build-time env vars (project secrets)
+
+```bash
+eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value "https://YOUR_PROJECT.supabase.co"
+eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "YOUR_ANON_KEY"
+```
+
+### Build profiles (already configured)
+
+File:
+- `eas.json`
+
+Profiles:
+- `development` -> dev client (internal)
+- `preview` -> internal testing (APK on Android)
+- `production` -> store-ready build
+
+### Build commands
+
+```bash
+# Internal test build (Android APK)
+eas build --profile preview --platform android
+
+# Production store builds
+eas build --profile production --platform android
+eas build --profile production --platform ios
+```
+
+### Submit to stores
+
+```bash
+eas submit --profile production --platform android
+eas submit --profile production --platform ios
+```
+
+### OTA updates after release (JS/UI only)
+
+```bash
+eas update --branch production --message "Describe update"
+```
