@@ -7,9 +7,11 @@ import GlassCard from '../../components/common/GlassCard';
 import InputField from '../../components/common/InputField';
 import { billCategories } from '../../constants/categories';
 import { colors } from '../../constants/colors';
+import { defaultReminderDaysBefore, formatReminderOffset, reminderOffsetOptions } from '../../constants/reminders';
 import { useCurrency } from '../../hooks/CurrencyProvider';
 import { deleteBill, getBillById, listBillCategories, updateBill } from '../../services/billService';
 import { recordPaymentForBill, undoPaymentForBillCurrentMonth } from '../../services/paymentService';
+import { syncBillReminders } from '../../services/reminderService';
 import { formatCurrency } from '../../utils/currency';
 
 function toEditForm(bill, categories) {
@@ -21,6 +23,8 @@ function toEditForm(bill, categories) {
     category: safeCategory,
     dueDay: String(bill.dueDay),
     recurring: bill.recurring,
+    reminderEnabled: bill.reminderEnabled,
+    reminderDaysBefore: bill.reminderDaysBefore ?? defaultReminderDaysBefore,
   };
 }
 
@@ -36,6 +40,8 @@ export default function BillDetailsScreen() {
   const [markingPaid, setMarkingPaid] = useState(false);
   const [undoingPaid, setUndoingPaid] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showUndoConfirm, setShowUndoConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: '',
@@ -43,6 +49,8 @@ export default function BillDetailsScreen() {
     category: billCategories[0],
     dueDay: '',
     recurring: true,
+    reminderEnabled: false,
+    reminderDaysBefore: defaultReminderDaysBefore,
   });
 
   useEffect(() => {
@@ -118,10 +126,15 @@ export default function BillDetailsScreen() {
     try {
       setSaving(true);
       const updated = await updateBill(bill.id, form);
+      const syncResult = await syncBillReminders({ requestPermissions: form.reminderEnabled });
       setBill(updated);
       setForm(toEditForm(updated, categories));
       setIsEditing(false);
-      setSuccessMessage('Bill updated successfully.');
+      setSuccessMessage(
+        syncResult.permissionGranted || !form.reminderEnabled
+          ? 'Bill updated successfully.'
+          : 'Bill updated. Enable notifications to receive reminders.'
+      );
     } catch (error) {
       setErrorMessage(error.message ?? 'Failed to update bill.');
     } finally {
@@ -131,25 +144,27 @@ export default function BillDetailsScreen() {
 
   function handleDeletePress() {
     if (!bill?.id) return;
+    setShowDeleteConfirm(true);
+  }
 
-    Alert.alert('Delete bill', 'Are you sure you want to delete this bill?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setDeleting(true);
-            await deleteBill(bill.id);
-            router.replace({ pathname: '/bills', params: { notice: 'Bill deleted successfully.' } });
-          } catch (error) {
-            setErrorMessage(error.message ?? 'Failed to delete bill.');
-          } finally {
-            setDeleting(false);
-          }
-        },
-      },
-    ]);
+  async function handleConfirmDelete() {
+    if (!bill?.id) return;
+
+    try {
+      setErrorMessage('');
+      setSuccessMessage('');
+      setDeleting(true);
+      await deleteBill(bill.id);
+      await syncBillReminders();
+      setShowDeleteConfirm(false);
+      router.replace({ pathname: '/bills', params: { notice: 'Bill deleted successfully.' } });
+    } catch (error) {
+      const nextMessage = error.message ?? 'Failed to delete bill.';
+      setErrorMessage(nextMessage);
+      Alert.alert('Delete failed', nextMessage);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function handleMarkPaidPress() {
@@ -160,6 +175,7 @@ export default function BillDetailsScreen() {
       setSuccessMessage('');
       setMarkingPaid(true);
       await recordPaymentForBill({ billId: bill.id, amountPaid: bill.amount });
+      await syncBillReminders();
       await loadBill();
       setSuccessMessage('Payment recorded for this month.');
     } catch (error) {
@@ -171,28 +187,28 @@ export default function BillDetailsScreen() {
 
   function handleUndoPaidPress() {
     if (!bill?.id) return;
+    setShowUndoConfirm(true);
+  }
 
-    Alert.alert('Undo payment', 'Remove this payment record for the current month?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Undo',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setErrorMessage('');
-            setSuccessMessage('');
-            setUndoingPaid(true);
-            await undoPaymentForBillCurrentMonth(bill.id);
-            await loadBill();
-            setSuccessMessage('Payment mark removed for this month.');
-          } catch (error) {
-            setErrorMessage(error.message ?? 'Failed to undo payment.');
-          } finally {
-            setUndoingPaid(false);
-          }
-        },
-      },
-    ]);
+  async function handleConfirmUndoPaid() {
+    if (!bill?.id) return;
+
+    try {
+      setErrorMessage('');
+      setSuccessMessage('');
+      setUndoingPaid(true);
+      await undoPaymentForBillCurrentMonth(bill.id);
+      await syncBillReminders();
+      await loadBill();
+      setShowUndoConfirm(false);
+      setSuccessMessage('Payment mark removed for this month.');
+    } catch (error) {
+      const nextMessage = error.message ?? 'Failed to undo payment.';
+      setErrorMessage(nextMessage);
+      Alert.alert('Undo failed', nextMessage);
+    } finally {
+      setUndoingPaid(false);
+    }
   }
 
   if (loading) {
@@ -248,6 +264,28 @@ export default function BillDetailsScreen() {
             <Switch value={form.recurring} onValueChange={(value) => updateField('recurring', value)} />
           </View>
 
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Bill reminder</Text>
+            <Switch value={form.reminderEnabled} onValueChange={(value) => updateField('reminderEnabled', value)} />
+          </View>
+
+          {form.reminderEnabled ? (
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Reminder timing</Text>
+              <View style={styles.pickerWrapper}>
+                <Picker
+                  selectedValue={form.reminderDaysBefore}
+                  onValueChange={(value) => updateField('reminderDaysBefore', Number(value))}
+                  style={styles.picker}
+                >
+                  {reminderOffsetOptions.map((option) => (
+                    <Picker.Item key={option.value} label={option.label} value={option.value} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          ) : null}
+
           <View style={styles.actionRow}>
             <Pressable
               style={[styles.secondaryButton, styles.flexButton]}
@@ -271,6 +309,9 @@ export default function BillDetailsScreen() {
             <Text style={styles.row}>Due day: {bill.dueDay}</Text>
             <Text style={styles.row}>Current cycle: {bill.dueText}</Text>
             <Text style={styles.row}>Recurring: {bill.recurring ? 'Yes' : 'No'}</Text>
+            <Text style={styles.row}>
+              Reminder: {bill.reminderEnabled ? formatReminderOffset(bill.reminderDaysBefore) : 'Off'}
+            </Text>
             <Text style={styles.row}>Status: {bill.status}</Text>
           </GlassCard>
 
@@ -288,9 +329,59 @@ export default function BillDetailsScreen() {
             </Pressable>
           )}
 
+          {showUndoConfirm ? (
+            <GlassCard style={styles.confirmCard}>
+              <Text style={styles.confirmTitle}>Undo payment mark?</Text>
+              <Text style={styles.confirmText}>
+                This removes the current month payment record and makes the bill unpaid again.
+              </Text>
+              <View style={styles.actionRow}>
+                <Pressable
+                  style={[styles.secondaryButton, styles.flexButton, styles.noTopMargin]}
+                  onPress={() => setShowUndoConfirm(false)}
+                  disabled={undoingPaid}
+                >
+                  <Text style={styles.secondaryButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.primaryButton, styles.flexButton, styles.noTopMargin]}
+                  onPress={handleConfirmUndoPaid}
+                  disabled={undoingPaid}
+                >
+                  <Text style={styles.primaryButtonText}>{undoingPaid ? 'Undoing...' : 'Yes, Undo'}</Text>
+                </Pressable>
+              </View>
+            </GlassCard>
+          ) : null}
+
           <Pressable style={styles.deleteButton} onPress={handleDeletePress} disabled={deleting}>
             <Text style={styles.deleteButtonText}>{deleting ? 'Deleting...' : 'Delete Bill'}</Text>
           </Pressable>
+
+          {showDeleteConfirm ? (
+            <GlassCard style={styles.confirmCard}>
+              <Text style={styles.confirmTitle}>Delete this bill?</Text>
+              <Text style={styles.confirmText}>
+                This will remove the bill and any payment history linked to it for this household.
+              </Text>
+              <View style={styles.actionRow}>
+                <Pressable
+                  style={[styles.secondaryButton, styles.flexButton, styles.noTopMargin]}
+                  onPress={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                >
+                  <Text style={styles.secondaryButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.deleteButton, styles.flexButton, styles.noTopMargin]}
+                  onPress={handleConfirmDelete}
+                  disabled={deleting}
+                >
+                  <Text style={styles.deleteButtonText}>{deleting ? 'Deleting...' : 'Yes, Delete'}</Text>
+                </Pressable>
+              </View>
+            </GlassCard>
+          ) : null}
         </>
       )}
     </ScreenContainer>
@@ -406,5 +497,23 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  confirmCard: {
+    marginTop: 12,
+    borderColor: 'rgba(239,68,68,0.35)',
+    backgroundColor: 'rgba(127,29,29,0.18)',
+  },
+  confirmTitle: {
+    color: colors.textPrimary,
+    fontWeight: '800',
+    fontSize: 16,
+    marginBottom: 6,
+  },
+  confirmText: {
+    color: colors.textSecondary,
+    marginBottom: 14,
+  },
+  noTopMargin: {
+    marginTop: 0,
   },
 });

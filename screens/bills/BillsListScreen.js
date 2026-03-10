@@ -9,6 +9,7 @@ import BillCard from '../../components/bills/BillCard';
 import GlassCard from '../../components/common/GlassCard';
 import { colors } from '../../constants/colors';
 import { useCurrency } from '../../hooks/CurrencyProvider';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { listBillCategories, listBills } from '../../services/billService';
 
 const quickStatusOptions = [
@@ -19,6 +20,7 @@ const quickStatusOptions = [
 ];
 
 export default function BillsListScreen() {
+  const styles = useThemedStyles(createStyles);
   const { notice } = useLocalSearchParams();
   const { currencyCode } = useCurrency();
   const [bills, setBills] = useState([]);
@@ -186,7 +188,7 @@ export default function BillsListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   header: {
     marginBottom: 12,
   },

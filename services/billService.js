@@ -1,5 +1,10 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { getCurrentMonthReference, getDueTiming } from '../utils/billingCycle';
+import { requireCurrentHousehold } from './householdService';
+
+const BILL_SELECT_BASE = 'id, name, amount, due_day, is_recurring, status, created_at, bill_categories(name)';
+const BILL_SELECT_WITH_REMINDERS =
+  'id, name, amount, due_day, is_recurring, reminder_enabled, reminder_days_before, status, created_at, bill_categories(name)';
 
 function assertSupabaseReady() {
   if (!isSupabaseConfigured || !supabase) {
@@ -7,18 +12,15 @@ function assertSupabaseReady() {
   }
 }
 
-async function requireUserId() {
-  assertSupabaseReady();
+function isMissingReminderColumnError(error) {
+  if (!error) return false;
 
-  const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
+  const message = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+  return message.includes('reminder_enabled') || message.includes('reminder_days_before');
+}
 
-  const userId = data?.user?.id;
-  if (!userId) {
-    throw new Error('You must be logged in to access bills.');
-  }
-
-  return userId;
+function getReminderSchemaError() {
+  return new Error('Reminder settings require the latest Supabase schema. Run the updated SQL in supabase/schema.sql and try again.');
 }
 
 function normalizeBill(row, paidBillIds = new Set()) {
@@ -32,6 +34,8 @@ function normalizeBill(row, paidBillIds = new Set()) {
     category: row.bill_categories?.name ?? 'Uncategorized',
     dueDay: row.due_day,
     recurring: row.is_recurring,
+    reminderEnabled: Boolean(row.reminder_enabled),
+    reminderDaysBefore: Number(row.reminder_days_before ?? 1),
     status: row.status,
     isPaidThisMonth,
     dueKind: isPaidThisMonth ? 'paid' : dueTiming.kind,
@@ -66,16 +70,27 @@ export async function listBillCategories() {
   return (data ?? []).map((row) => row.name);
 }
 
+async function selectBillsQuery(builderFactory) {
+  const primaryResult = await builderFactory(BILL_SELECT_WITH_REMINDERS);
+  if (!isMissingReminderColumnError(primaryResult.error)) {
+    return primaryResult;
+  }
+
+  return builderFactory(BILL_SELECT_BASE);
+}
+
 export async function listBills() {
-  const userId = await requireUserId();
+  const { householdId } = await requireCurrentHousehold();
   const monthReference = getCurrentMonthReference();
 
-  const { data, error } = await supabase
-    .from('bills')
-    .select('id, name, amount, due_day, is_recurring, status, created_at, bill_categories(name)')
-    .eq('user_id', userId)
-    .order('due_day', { ascending: true })
-    .order('created_at', { ascending: false });
+  const { data, error } = await selectBillsQuery((selectClause) =>
+    supabase
+      .from('bills')
+      .select(selectClause)
+      .eq('household_id', householdId)
+      .order('due_day', { ascending: true })
+      .order('created_at', { ascending: false })
+  );
 
   if (error) throw error;
 
@@ -87,7 +102,7 @@ export async function listBills() {
     const { data: paymentsData, error: paymentsError } = await supabase
       .from('payments')
       .select('bill_id')
-      .eq('user_id', userId)
+      .eq('household_id', householdId)
       .eq('month_reference', monthReference)
       .in('bill_id', billIds);
 
@@ -102,15 +117,17 @@ export async function listBills() {
 }
 
 export async function getBillById(id) {
-  const userId = await requireUserId();
+  const { householdId } = await requireCurrentHousehold();
   const monthReference = getCurrentMonthReference();
 
-  const { data, error } = await supabase
-    .from('bills')
-    .select('id, name, amount, due_day, is_recurring, status, created_at, bill_categories(name)')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const { data, error } = await selectBillsQuery((selectClause) =>
+    supabase
+      .from('bills')
+      .select(selectClause)
+      .eq('id', id)
+      .eq('household_id', householdId)
+      .maybeSingle()
+  );
 
   if (error) throw error;
   if (!data) return null;
@@ -118,7 +135,7 @@ export async function getBillById(id) {
   const { data: paymentData, error: paymentError } = await supabase
     .from('payments')
     .select('bill_id')
-    .eq('user_id', userId)
+    .eq('household_id', householdId)
     .eq('bill_id', id)
     .eq('month_reference', monthReference)
     .maybeSingle();
@@ -130,31 +147,63 @@ export async function getBillById(id) {
 }
 
 export async function createBill(input) {
-  const userId = await requireUserId();
+  const { userId, householdId } = await requireCurrentHousehold();
   const categoryId = await findCategoryIdByName(input.category);
 
   const payload = {
     user_id: userId,
+    household_id: householdId,
+    created_by_user_id: userId,
     category_id: categoryId,
     name: input.name.trim(),
     amount: Number(input.amount),
     due_day: Number(input.dueDay),
     is_recurring: Boolean(input.recurring),
+    reminder_enabled: Boolean(input.reminderEnabled),
+    reminder_days_before: Number(input.reminderDaysBefore ?? 1),
     status: 'active',
   };
 
   const { data, error } = await supabase
     .from('bills')
     .insert(payload)
-    .select('id, name, amount, due_day, is_recurring, status, created_at, bill_categories(name)')
+    .select(BILL_SELECT_WITH_REMINDERS)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (isMissingReminderColumnError(error)) {
+      if (input.reminderEnabled) throw getReminderSchemaError();
+
+      const legacyPayload = {
+        user_id: userId,
+        household_id: householdId,
+        created_by_user_id: userId,
+        category_id: categoryId,
+        name: input.name.trim(),
+        amount: Number(input.amount),
+        due_day: Number(input.dueDay),
+        is_recurring: Boolean(input.recurring),
+        status: 'active',
+      };
+
+      const { data: legacyData, error: legacyError } = await supabase
+        .from('bills')
+        .insert(legacyPayload)
+        .select(BILL_SELECT_BASE)
+        .single();
+
+      if (legacyError) throw legacyError;
+      return normalizeBill(legacyData);
+    }
+
+    throw error;
+  }
+
   return normalizeBill(data);
 }
 
 export async function updateBill(id, input) {
-  const userId = await requireUserId();
+  const { householdId } = await requireCurrentHousehold();
   const categoryId = await findCategoryIdByName(input.category);
 
   const updates = {
@@ -163,29 +212,71 @@ export async function updateBill(id, input) {
     amount: Number(input.amount),
     due_day: Number(input.dueDay),
     is_recurring: Boolean(input.recurring),
+    reminder_enabled: Boolean(input.reminderEnabled),
+    reminder_days_before: Number(input.reminderDaysBefore ?? 1),
   };
 
   const { data, error } = await supabase
     .from('bills')
     .update(updates)
     .eq('id', id)
-    .eq('user_id', userId)
-    .select('id, name, amount, due_day, is_recurring, status, created_at, bill_categories(name)')
+    .eq('household_id', householdId)
+    .select(BILL_SELECT_WITH_REMINDERS)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    if (isMissingReminderColumnError(error)) {
+      if (input.reminderEnabled) throw getReminderSchemaError();
+
+      const legacyUpdates = {
+        category_id: categoryId,
+        name: input.name.trim(),
+        amount: Number(input.amount),
+        due_day: Number(input.dueDay),
+        is_recurring: Boolean(input.recurring),
+      };
+
+      const { data: legacyData, error: legacyError } = await supabase
+        .from('bills')
+        .update(legacyUpdates)
+        .eq('id', id)
+        .eq('household_id', householdId)
+        .select(BILL_SELECT_BASE)
+        .maybeSingle();
+
+      if (legacyError) throw legacyError;
+      if (!legacyData) throw new Error('Bill not found or not allowed.');
+      return normalizeBill(legacyData);
+    }
+
+    throw error;
+  }
+
   if (!data) throw new Error('Bill not found or not allowed.');
   return normalizeBill(data);
 }
 
 export async function deleteBill(id) {
-  const userId = await requireUserId();
+  const { householdId } = await requireCurrentHousehold();
 
-  const { error } = await supabase
+  const { data: existingBill, error: existingBillError } = await supabase
     .from('bills')
-    .delete()
+    .select('id')
     .eq('id', id)
-    .eq('user_id', userId);
+    .eq('household_id', householdId)
+    .maybeSingle();
+
+  if (existingBillError) throw existingBillError;
+  if (!existingBill) {
+    throw new Error('Bill not found or not allowed.');
+  }
+
+  const { data, error } = await supabase.rpc('delete_household_bill', {
+    target_bill_id: id,
+  });
 
   if (error) throw error;
+  if (!data) {
+    throw new Error('Bill could not be deleted.');
+  }
 }

@@ -27,10 +27,16 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./app/assets/icon.png"
+      "favicon": "./app/assets/icon.png",
+      "name": "BillGuard",
+      "shortName": "BillGuard",
+      "themeColor": "#111114",
+      "backgroundColor": "#111114",
+      "display": "standalone"
     },
     "plugins": [
       "expo-router",
+      "expo-notifications",
       [
         "expo-splash-screen",
         {

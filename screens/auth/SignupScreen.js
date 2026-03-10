@@ -1,15 +1,18 @@
-import { useState } from 'react';
 import { Link, router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import ScreenContainer from '../../components/common/ScreenContainer';
 import InputField from '../../components/common/InputField';
-import { useAuth } from '../../hooks/AuthProvider';
+import ScreenContainer from '../../components/common/ScreenContainer';
 import { colors } from '../../constants/colors';
+import { useAuth } from '../../hooks/AuthProvider';
+import { updateProfileName } from '../../services/profileService';
 
 export default function SignupScreen() {
   const { signupWithEmail, isSupabaseConfigured } = useAuth();
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -18,13 +21,18 @@ export default function SignupScreen() {
     setMessage('');
     setErrorMessage('');
 
-    if (!email || !password) {
-      setErrorMessage('Please enter email and password.');
+    if (!email || !password || !confirmPassword) {
+      setErrorMessage('Please enter email, password, and confirmation password.');
       return;
     }
 
     if (password.length < 6) {
       setErrorMessage('Use at least 6 characters for password.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
       return;
     }
 
@@ -36,6 +44,10 @@ export default function SignupScreen() {
     try {
       setLoading(true);
       const data = await signupWithEmail(email.trim(), password);
+
+      if (data?.user?.id && fullName.trim()) {
+        await updateProfileName(data.user.id, fullName.trim());
+      }
 
       if (data?.session) {
         router.replace('/dashboard');
@@ -58,8 +70,15 @@ export default function SignupScreen() {
         <Text style={styles.subtitle}>Start with a simple BillGuard account</Text>
       </View>
 
+      <InputField label="Full name" value={fullName} onChangeText={setFullName} placeholder="e.g. Alex dela Cruz" />
       <InputField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
       <InputField label="Password" value={password} onChangeText={setPassword} secureTextEntry />
+      <InputField
+        label="Confirm Password"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        secureTextEntry
+      />
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       {message ? <Text style={styles.infoText}>{message}</Text> : null}

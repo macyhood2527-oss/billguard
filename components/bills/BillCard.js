@@ -1,25 +1,26 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../constants/colors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { formatCurrency } from '../../utils/currency';
 import GlassCard from '../common/GlassCard';
 
-const statusMap = {
-  upcoming: colors.warning,
-  paid: colors.success,
-  overdue: colors.danger,
-  active: colors.primary,
-  paused: colors.warning,
-  archived: colors.textSecondary,
-};
-
-const dueMap = {
-  paid: colors.success,
-  today: colors.warning,
-  upcoming: colors.textSecondary,
-  overdue: colors.danger,
-};
-
 export default function BillCard({ bill, onPress, currencyCode }) {
+  const styles = useThemedStyles(createStyles);
+  const statusMap = {
+    upcoming: colors.warning,
+    paid: colors.success,
+    overdue: colors.danger,
+    active: colors.primary,
+    paused: colors.warning,
+    archived: colors.textSecondary,
+  };
+  const dueMap = {
+    paid: colors.success,
+    today: colors.warning,
+    upcoming: colors.textSecondary,
+    overdue: colors.danger,
+  };
+
   return (
     <Pressable onPress={onPress}>
       <GlassCard style={styles.card}>
@@ -38,7 +39,7 @@ export default function BillCard({ bill, onPress, currencyCode }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   card: {
     marginBottom: 12,
   },

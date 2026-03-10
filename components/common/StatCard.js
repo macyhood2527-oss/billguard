@@ -1,8 +1,11 @@
 import { StyleSheet, Text } from 'react-native';
 import { colors } from '../../constants/colors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import GlassCard from './GlassCard';
 
 export default function StatCard({ title, value, tone = 'primary', cardStyle, valueStyle }) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <GlassCard style={[styles.card, cardStyle]}>
       <Text style={styles.title}>{title}</Text>
@@ -13,7 +16,7 @@ export default function StatCard({ title, value, tone = 'primary', cardStyle, va
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   card: {
     marginBottom: 12,
   },

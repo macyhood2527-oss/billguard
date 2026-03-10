@@ -6,10 +6,12 @@ import GlassCard from '../../components/common/GlassCard';
 import StatCard from '../../components/common/StatCard';
 import { colors } from '../../constants/colors';
 import { useCurrency } from '../../hooks/CurrencyProvider';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { getDashboardSummary } from '../../services/dashboardService';
 import { formatCurrency } from '../../utils/currency';
 
 export default function DashboardScreen() {
+  const styles = useThemedStyles(createStyles);
   const { currencyCode } = useCurrency();
   const [summary, setSummary] = useState({
     upcomingCount: 0,
@@ -44,20 +46,16 @@ export default function DashboardScreen() {
 
   return (
     <ScreenContainer>
-      <View style={styles.heroWrap}>
-        <View style={styles.heroGlowPrimary} />
-        <View style={styles.heroGlowSecondary} />
-        <GlassCard style={styles.headerCard}>
-          <View style={styles.header}>
-            <View style={styles.brandRow}>
-              <Image source={require('../../app/assets/icon.png')} style={styles.brandLogo} resizeMode="contain" />
-              <Text style={styles.brandName}>BillGuard</Text>
-            </View>
-            <Text style={styles.title}>Dashboard</Text>
-            <Text style={styles.subtitle}>Your monthly bill health at a glance</Text>
+      <GlassCard style={styles.headerCard}>
+        <View style={styles.header}>
+          <View style={styles.brandRow}>
+            <Image source={require('../../app/assets/icon.png')} style={styles.brandLogo} resizeMode="contain" />
+            <Text style={styles.brandName}>BillGuard</Text>
           </View>
-        </GlassCard>
-      </View>
+          <Text style={styles.title}>Dashboard</Text>
+          <Text style={styles.subtitle}>Your monthly bill health at a glance</Text>
+        </View>
+      </GlassCard>
 
       {loading ? <ActivityIndicator size="large" color={colors.primary} style={styles.loader} /> : null}
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
@@ -80,7 +78,7 @@ export default function DashboardScreen() {
                 value={formatCurrency(summary.monthlyObligation, currencyCode)}
                 tone="primary"
                 cardStyle={styles.compactCard}
-                valueStyle={styles.monthlyValue}
+                valueStyle={{ color: colors.primary }}
               />
             </View>
           </View>
@@ -104,31 +102,10 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  heroWrap: {
-    position: 'relative',
-    marginBottom: 10,
-  },
-  heroGlowPrimary: {
-    position: 'absolute',
-    top: -36,
-    right: 4,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: 'rgba(225,29,72,0.24)',
-  },
-  heroGlowSecondary: {
-    position: 'absolute',
-    top: 20,
-    left: -30,
-    width: 180,
-    height: 180,
-    borderRadius: 999,
-    backgroundColor: 'rgba(251,113,133,0.12)',
-  },
+const createStyles = () => StyleSheet.create({
   headerCard: {
     padding: 16,
+    marginBottom: 10,
   },
   header: {
     marginBottom: 2,
@@ -176,9 +153,6 @@ const styles = StyleSheet.create({
   compactCard: {
     minHeight: 110,
     paddingVertical: 12,
-  },
-  monthlyValue: {
-    color: colors.primary,
   },
   errorText: {
     color: colors.danger,

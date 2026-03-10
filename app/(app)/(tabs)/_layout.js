@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import { colors } from '../../../constants/colors';
+import { useTheme } from '../../../hooks/ThemeProvider';
 
 const iconByRoute = {
   dashboard: 'home-outline',
@@ -11,8 +12,11 @@ const iconByRoute = {
 };
 
 export default function TabLayout() {
+  const { themeId } = useTheme();
+
   return (
     <Tabs
+      key={themeId}
       initialRouteName="dashboard"
       screenOptions={({ route }) => ({
         sceneStyle: { backgroundColor: colors.background },

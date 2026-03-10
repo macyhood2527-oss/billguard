@@ -1,5 +1,6 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { getCurrentMonthReference, getDueTiming } from '../utils/billingCycle';
+import { requireCurrentHousehold } from './householdService';
 
 function assertSupabaseReady() {
   if (!isSupabaseConfigured || !supabase) {
@@ -7,28 +8,14 @@ function assertSupabaseReady() {
   }
 }
 
-async function requireUserId() {
-  assertSupabaseReady();
-
-  const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
-
-  const userId = data?.user?.id;
-  if (!userId) {
-    throw new Error('You must be logged in to view dashboard.');
-  }
-
-  return userId;
-}
-
 export async function getDashboardSummary() {
-  const userId = await requireUserId();
+  const { householdId } = await requireCurrentHousehold();
   const monthReference = getCurrentMonthReference();
 
   const { data: billsData, error: billsError } = await supabase
     .from('bills')
     .select('id, amount, due_day, status')
-    .eq('user_id', userId)
+    .eq('household_id', householdId)
     .eq('status', 'active');
 
   if (billsError) throw billsError;
@@ -38,7 +25,7 @@ export async function getDashboardSummary() {
   const { data: paymentsData, error: paymentsError } = await supabase
     .from('payments')
     .select('bill_id, amount_paid')
-    .eq('user_id', userId)
+    .eq('household_id', householdId)
     .eq('month_reference', monthReference);
 
   if (paymentsError) throw paymentsError;

@@ -1,12 +1,27 @@
 import { Stack } from 'expo-router';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { AuthProvider, useAuth } from '../hooks/AuthProvider';
 import { CurrencyProvider } from '../hooks/CurrencyProvider';
+import { ThemeProvider } from '../hooks/ThemeProvider';
 import { colors } from '../constants/colors';
+import { cancelBillReminderNotifications, syncBillReminders } from '../services/reminderService';
 
 function RootNavigator() {
-  const { isLoading } = useAuth();
+  const { isLoading, session, isSupabaseConfigured } = useAuth();
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return undefined;
+
+    if (!session) {
+      cancelBillReminderNotifications().catch(() => {});
+      return undefined;
+    }
+
+    syncBillReminders().catch(() => {});
+    return undefined;
+  }, [isSupabaseConfigured, session]);
 
   if (isLoading) {
     return (
@@ -28,10 +43,12 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <CurrencyProvider>
-        <StatusBar style="light" backgroundColor={colors.background} />
-        <RootNavigator />
-      </CurrencyProvider>
+      <ThemeProvider>
+        <CurrencyProvider>
+          <StatusBar style="light" backgroundColor={colors.background} />
+          <RootNavigator />
+        </CurrencyProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

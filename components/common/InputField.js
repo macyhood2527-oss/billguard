@@ -1,7 +1,10 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '../../constants/colors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 
 export default function InputField({ label, value, onChangeText, ...props }) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
@@ -16,7 +19,7 @@ export default function InputField({ label, value, onChangeText, ...props }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   container: {
     marginBottom: 14,
   },

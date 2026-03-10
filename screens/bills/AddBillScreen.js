@@ -7,9 +7,13 @@ import InputField from '../../components/common/InputField';
 import GlassCard from '../../components/common/GlassCard';
 import { billCategories } from '../../constants/categories';
 import { colors } from '../../constants/colors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import { defaultReminderDaysBefore, reminderOffsetOptions } from '../../constants/reminders';
+import { syncBillReminders } from '../../services/reminderService';
 import { createBill, listBillCategories } from '../../services/billService';
 
 export default function AddBillScreen() {
+  const styles = useThemedStyles(createStyles);
   const [categories, setCategories] = useState(billCategories);
   const [form, setForm] = useState({
     name: '',
@@ -17,6 +21,8 @@ export default function AddBillScreen() {
     category: categories[0],
     dueDay: '',
     recurring: true,
+    reminderEnabled: false,
+    reminderDaysBefore: defaultReminderDaysBefore,
   });
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -80,8 +86,14 @@ export default function AddBillScreen() {
         category: categories[0],
         dueDay: '',
         recurring: true,
+        reminderEnabled: false,
+        reminderDaysBefore: defaultReminderDaysBefore,
       });
-      router.replace({ pathname: '/bills', params: { notice: 'Bill created successfully.' } });
+      const syncResult = await syncBillReminders({ requestPermissions: form.reminderEnabled });
+      const notice = syncResult.permissionGranted || !form.reminderEnabled
+        ? 'Bill created successfully.'
+        : 'Bill created. Enable notifications to receive reminders.';
+      router.replace({ pathname: '/bills', params: { notice } });
     } catch (error) {
       setErrorMessage(error.message ?? 'Failed to create bill.');
     } finally {
@@ -128,6 +140,28 @@ export default function AddBillScreen() {
         <Switch value={form.recurring} onValueChange={(value) => updateField('recurring', value)} />
       </GlassCard>
 
+      <GlassCard style={styles.switchRow}>
+        <Text style={styles.switchLabel}>Bill reminder</Text>
+        <Switch value={form.reminderEnabled} onValueChange={(value) => updateField('reminderEnabled', value)} />
+      </GlassCard>
+
+      {form.reminderEnabled ? (
+        <View style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>Reminder timing</Text>
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={form.reminderDaysBefore}
+              onValueChange={(value) => updateField('reminderDaysBefore', Number(value))}
+              style={styles.picker}
+            >
+              {reminderOffsetOptions.map((option) => (
+                <Picker.Item key={option.value} label={option.label} value={option.value} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+      ) : null}
+
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
       <Pressable style={styles.button} onPress={handleSave} disabled={loading}>
@@ -137,7 +171,7 @@ export default function AddBillScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   header: {
     marginBottom: 14,
   },

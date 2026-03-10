@@ -25,3 +25,24 @@ export async function logout() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
+
+export async function changePassword({ email, currentPassword, newPassword }) {
+  assertSupabaseReady();
+
+  if (!email) {
+    throw new Error('No account email found for this session.');
+  }
+
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email,
+    password: currentPassword,
+  });
+  if (reauthError) throw new Error('Current password is incorrect.');
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+  if (updateError) throw updateError;
+
+  return true;
+}
