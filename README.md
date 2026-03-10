@@ -1,6 +1,6 @@
-# BillGuard (Expo + Supabase MVP)
+# BillGuard (Expo + Supabase)
 
-Mobile-first BillGuard app with Supabase auth, bills CRUD, dynamic categories, and user currency preference.
+Mobile-first BillGuard app with Supabase auth, shared household billing, payment history, reminders, printable reports, and profile/theme settings.
 
 ## 1) Install and run
 
@@ -39,14 +39,21 @@ Where to find them:
 Run SQL from:
 - `supabase/schema.sql`
 
-It creates/updates MVP tables:
+It creates/updates app tables:
 - `profiles`
+- `households`
+- `household_members`
+- `household_invites`
 - `bill_categories`
 - `bills`
 - `payments` (includes `month_reference`)
 
 It also includes:
 - `profiles.currency_code` (user preferred currency)
+- `profiles.theme_color`
+- `profiles.active_household_id`
+- bills and payments household ownership
+- payment snapshot fields for historical reports
 
 It also inserts starter categories:
 - Utilities
@@ -56,31 +63,71 @@ It also inserts starter categories:
 - Insurance
 - Credit Cards
 
-## 4) Current app behavior
+## 4) Milestone Progress
 
-- Signup/Login screens are connected to Supabase email/password auth.
-- Profile screen can log out.
-- Profile screen can update preferred currency.
-- Session persistence is enabled through Supabase auth config.
-- If env vars are missing, app still boots and shows safe alerts instead of crashing.
-- Bills list/add/details/edit/delete are connected to Supabase.
-- Bill categories dropdown is loaded from Supabase `bill_categories` (with local fallback).
+### Milestone 1: App foundation
+- Supabase client integration
+- Signup / login / logout
+- Session-based routing
+- Safe boot when env vars are missing
 
-## 5) Scope boundaries
-
-Implemented now:
-- Supabase client foundation
-- Auth integration (signup/login/logout)
-- Route/session handling for auth vs app screens
+### Milestone 2: Bills and payments
 - Bills CRUD
 - Dynamic bill categories
-- Currency preference + amount formatting
+- Mark bill as paid
+- Undo bill payment
+- Payment history list
+- Month and payer filtering in Payments
 
-Phase 2:
-- Form schema validation
-- Notifications/reminders
+### Milestone 3: Shared household model
+- Household-based ownership instead of per-user-only ownership
+- Household members and invites
+- Accept invite flow
+- Switch active household
+- Create another household
+- Rename household
+- Remove member
+- Leave household
+- Transfer household ownership
 
-## 6) Release checklist (EAS deployment)
+### Milestone 4: Profile and personalization
+- Full name editing
+- Currency preference
+- Theme color selection
+- Password change in Profile
+- Signup password confirmation
+
+### Milestone 5: Reports and history hardening
+- Monthly printable payment report
+- Clean report layout for export/print
+- Report filename support
+- Historical payment amount preservation
+- Payment bill name/category snapshot support so old reports stay stable after bill renames
+
+### Milestone 6: UI polish
+- Theme-aware shared components
+- Improved tab/background orb motion
+- Screen content entrance transitions
+- Reorganized Profile tab
+- Collapsible Profile management sections
+
+## 5) Current app behavior
+
+- Signup/Login screens are connected to Supabase email/password auth.
+- Profile supports full name, password change, preferred currency, and theme selection.
+- Session persistence is enabled through Supabase auth config.
+- Bills list/add/details/edit/delete are connected to Supabase.
+- Payment history supports filtering and printable monthly reporting.
+- Household collaboration is supported through shared households, member management, and invites.
+- If env vars are missing, app still boots and shows safe alerts instead of crashing.
+
+## 6) Current limitations / notes
+
+- Latest schema changes must be rerun in Supabase from `supabase/schema.sql` when database fields/functions are added.
+- Web/PWA use is possible, but current best working mode is still Expo/dev usage.
+- Real standalone iPhone usage still depends on a proper iOS build / TestFlight path.
+
+## 7) Release checklist (EAS deployment)
 
 Prerequisites:
 - Expo account + `eas-cli` installed
