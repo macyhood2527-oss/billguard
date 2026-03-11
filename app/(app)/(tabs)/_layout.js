@@ -37,11 +37,11 @@ export default function TabLayout() {
         ),
       })}
     >
-      <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
-      <Tabs.Screen name="bills" options={{ title: 'Bills' }} />
-      <Tabs.Screen name="add-bill" options={{ title: 'Add Bill' }} />
-      <Tabs.Screen name="payment-history" options={{ title: 'Payments' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+      <Tabs.Screen name="dashboard" options={{ title: 'Dashboard', href: '/dashboard' }} />
+      <Tabs.Screen name="bills" options={{ title: 'Bills', href: '/bills' }} />
+      <Tabs.Screen name="add-bill" options={{ title: 'Add Bill', href: '/add-bill' }} />
+      <Tabs.Screen name="payment-history" options={{ title: 'Payments', href: '/payment-history' }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile', href: '/profile' }} />
     </Tabs>
   );
 }
