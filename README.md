@@ -17,6 +17,7 @@ Optional:
 npm run ios
 npm run android
 npm run web
+npm run build:web
 npm run lint
 ```
 
@@ -182,3 +183,25 @@ eas submit --profile production --platform ios
 ```bash
 eas update --branch production --message "Describe update"
 ```
+
+## 8) Vercel web deployment
+
+Use Expo's static web export for Vercel.
+
+Build:
+
+```bash
+npm run build:web
+```
+
+This project includes `vercel.json` with:
+- build command: `npm run build:web`
+- output directory: `dist`
+
+In Vercel:
+- Framework Preset: `Other`
+- Build Command: leave default from `vercel.json`
+- Output Directory: leave default from `vercel.json`
+- Add env vars:
+  - `EXPO_PUBLIC_SUPABASE_URL`
+  - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
