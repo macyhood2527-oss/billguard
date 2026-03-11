@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import AppIcon from '../../components/common/AppIcon';
 import ScreenContainer from '../../components/common/ScreenContainer';
 import GlassCard from '../../components/common/GlassCard';
 import { colors } from '../../constants/colors';
@@ -120,17 +121,26 @@ export default function PaymentHistoryScreen() {
         <>
           <View style={styles.summaryRow}>
             <GlassCard style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Total Paid</Text>
+              <View style={styles.summaryHeader}>
+                <Text style={styles.summaryLabel}>Total Paid</Text>
+                <AppIcon name="DollarSign" size={18} color={colors.primary} />
+              </View>
               <Text style={styles.summaryValue}>{formatCurrency(totalAmount, currencyCode)}</Text>
             </GlassCard>
             <GlassCard style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Payments</Text>
+              <View style={styles.summaryHeader}>
+                <Text style={styles.summaryLabel}>Payments</Text>
+                <AppIcon name="CreditCard" size={18} color={colors.primary} />
+              </View>
               <Text style={styles.summaryValue}>{totalCount}</Text>
             </GlassCard>
           </View>
 
           <GlassCard style={styles.filtersCard}>
-            <Text style={styles.filterLabel}>Month</Text>
+            <View style={styles.filterHeader}>
+              <AppIcon name="Calendar" size={18} color={colors.textSecondary} />
+              <Text style={styles.filterLabel}>Month</Text>
+            </View>
             <View style={styles.filterWrap}>
               {monthOptions.map((month) => {
                 const active = selectedMonth === month;
@@ -156,9 +166,12 @@ export default function PaymentHistoryScreen() {
               onPress={handleExportReport}
               disabled={selectedMonth === 'all' || isExporting}
             >
-              <Text style={styles.exportButtonText}>
-                {isExporting ? 'Generating PDF...' : 'Export Monthly PDF'}
-              </Text>
+              <View style={styles.exportButtonInner}>
+                <AppIcon name="Receipt" size={18} color="#FFFFFF" />
+                <Text style={styles.exportButtonText}>
+                  {isExporting ? 'Generating PDF...' : 'Export Monthly PDF'}
+                </Text>
+              </View>
             </Pressable>
             <Text style={styles.exportHint}>
               {selectedMonth === 'all'
@@ -166,7 +179,10 @@ export default function PaymentHistoryScreen() {
                 : `Exports ${formatMonthLabel(selectedMonth)} for the current household.`}
             </Text>
 
-            <Text style={styles.filterLabel}>Paid By</Text>
+            <View style={styles.filterHeader}>
+              <AppIcon name="Users" size={18} color={colors.textSecondary} />
+              <Text style={styles.filterLabel}>Paid By</Text>
+            </View>
             <View style={styles.filterWrap}>
               {payerOptions.map((payer) => {
                 const active = selectedPayer === payer;
@@ -205,12 +221,21 @@ export default function PaymentHistoryScreen() {
             <GlassCard key={payment.id} style={styles.item}>
               <View style={styles.topRow}>
                 <View style={styles.nameWrap}>
-                  <Text style={styles.name}>{payment.billName}</Text>
-                  <Text style={styles.meta}>
-                    {formatDate(payment.paidAt)} · {formatMonthLabel(payment.monthReference)}
-                  </Text>
+                  <View style={styles.nameRow}>
+                    <AppIcon name="Receipt" size={20} color={colors.textSecondary} />
+                    <Text style={styles.name}>{payment.billName}</Text>
+                  </View>
+                  <View style={styles.metaRow}>
+                    <AppIcon name="Calendar" size={18} color={colors.textSecondary} />
+                    <Text style={styles.meta}>
+                      {formatDate(payment.paidAt)} · {formatMonthLabel(payment.monthReference)}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={styles.amount}>{formatCurrency(payment.amount, currencyCode)}</Text>
+                <View style={styles.amountRow}>
+                  <AppIcon name="DollarSign" size={18} color={colors.success} />
+                  <Text style={styles.amount}>{formatCurrency(payment.amount, currencyCode)}</Text>
+                </View>
               </View>
 
               <View style={styles.payerRow}>
@@ -250,10 +275,16 @@ const createStyles = () => StyleSheet.create({
     flex: 1,
     padding: 12,
   },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 6,
+  },
   summaryLabel: {
     color: colors.textSecondary,
     fontSize: 12,
-    marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -269,9 +300,14 @@ const createStyles = () => StyleSheet.create({
   filterLabel: {
     color: colors.textSecondary,
     fontSize: 12,
-    marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
   },
   filterWrap: {
     flexDirection: 'row',
@@ -320,6 +356,11 @@ const createStyles = () => StyleSheet.create({
     fontWeight: '800',
     fontSize: 13,
   },
+  exportButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   exportHint: {
     color: colors.textSecondary,
     fontSize: 12,
@@ -353,15 +394,31 @@ const createStyles = () => StyleSheet.create({
   nameWrap: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
   name: {
     color: colors.textPrimary,
     fontWeight: '700',
     fontSize: 16,
-    marginBottom: 4,
+    flexShrink: 1,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   meta: {
     color: colors.textSecondary,
     fontSize: 13,
+  },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   amount: {
     color: colors.success,

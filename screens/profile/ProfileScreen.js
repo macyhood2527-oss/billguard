@@ -2,6 +2,7 @@ import { Picker } from '@react-native-picker/picker';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import AppIcon from '../../components/common/AppIcon';
 import GlassCard from '../../components/common/GlassCard';
 import InputField from '../../components/common/InputField';
 import ScreenContainer from '../../components/common/ScreenContainer';
@@ -455,6 +456,15 @@ export default function ProfileScreen() {
     }
   }
 
+  function renderActionLabel(iconName, label, color = colors.textPrimary) {
+    return (
+      <View style={styles.actionLabel}>
+        <AppIcon name={iconName} size={18} color={color} />
+        <Text style={[styles.actionLabelText, { color }]}>{label}</Text>
+      </View>
+    );
+  }
+
   return (
     <ScreenContainer>
       <Text style={styles.title}>Profile & Settings</Text>
@@ -575,7 +585,10 @@ export default function ProfileScreen() {
 
       <GlassCard style={styles.card}>
         <View style={styles.cardHeaderRow}>
-          <Text style={styles.label}>Members</Text>
+          <View style={styles.labelWithIcon}>
+            <AppIcon name="Users" size={18} color={colors.textSecondary} />
+            <Text style={styles.label}>Members</Text>
+          </View>
           <Pressable style={styles.collapseButton} onPress={() => setShowMembers((value) => !value)}>
             <Text style={styles.collapseButtonText}>{showMembers ? 'Hide' : 'Show'}</Text>
           </Pressable>
@@ -610,9 +623,7 @@ export default function ProfileScreen() {
                             onPress={() => handleTransferOwnership(member)}
                             disabled={transferringOwnerId === member.userId}
                           >
-                            <Text style={styles.inlineButtonText}>
-                              {transferringOwnerId === member.userId ? 'Transferring...' : 'Transfer'}
-                            </Text>
+                            {renderActionLabel('Crown', transferringOwnerId === member.userId ? 'Transferring...' : 'Transfer', '#FFFFFF')}
                           </Pressable>
                         </View>
                       </View>
@@ -647,7 +658,7 @@ export default function ProfileScreen() {
                             setConfirmTransferOwnerId(member.userId);
                           }}
                         >
-                          <Text style={styles.inlineButtonText}>Make Owner</Text>
+                          {renderActionLabel('Crown', 'Make Owner', '#FFFFFF')}
                         </Pressable>
                         <Pressable
                           style={styles.memberRemoveButton}
@@ -671,7 +682,10 @@ export default function ProfileScreen() {
 
       {householdRole === 'owner' ? (
         <GlassCard style={styles.card}>
-          <Text style={styles.label}>Add Family Member</Text>
+          <View style={styles.labelWithIcon}>
+            <AppIcon name="UserPlus" size={18} color={colors.textSecondary} />
+            <Text style={styles.label}>Add Family Member</Text>
+          </View>
           <InputField
             label="Family member email"
             value={inviteEmail}
@@ -681,7 +695,7 @@ export default function ProfileScreen() {
             placeholder="name@example.com"
           />
           <Pressable style={styles.secondaryButton} onPress={handleSendInvite} disabled={sendingInvite}>
-            <Text style={styles.secondaryButtonText}>{sendingInvite ? 'Sending...' : 'Create Invite'}</Text>
+            {renderActionLabel('UserPlus', sendingInvite ? 'Sending...' : 'Create Invite')}
           </Pressable>
         </GlassCard>
       ) : null}
@@ -726,9 +740,7 @@ export default function ProfileScreen() {
                   onPress={() => handleSwitchHousehold(household.householdId)}
                   disabled={switchingHouseholdId === household.householdId}
                 >
-                  <Text style={styles.inlineButtonText}>
-                    {switchingHouseholdId === household.householdId ? 'Switching...' : 'Switch'}
-                  </Text>
+                  {renderActionLabel('Users', switchingHouseholdId === household.householdId ? 'Switching...' : 'Switch', '#FFFFFF')}
                 </Pressable>
               ) : null}
 
@@ -748,9 +760,7 @@ export default function ProfileScreen() {
                       onPress={() => handleLeaveHousehold(household)}
                       disabled={leavingHouseholdId === household.householdId}
                     >
-                      <Text style={styles.dangerButtonText}>
-                        {leavingHouseholdId === household.householdId ? 'Leaving...' : 'Leave'}
-                      </Text>
+                      {renderActionLabel('LogOut', leavingHouseholdId === household.householdId ? 'Leaving...' : 'Leave', '#FFFFFF')}
                     </Pressable>
                   </View>
                 </View>
@@ -759,7 +769,7 @@ export default function ProfileScreen() {
                   style={styles.memberRemoveButton}
                   onPress={() => setConfirmLeaveHouseholdId(household.householdId)}
                 >
-                  <Text style={styles.memberRemoveButtonText}>Leave</Text>
+                  {renderActionLabel('LogOut', 'Leave', colors.danger)}
                 </Pressable>
               )}
             </View>
@@ -771,7 +781,10 @@ export default function ProfileScreen() {
 
       <GlassCard style={styles.card}>
         <View style={styles.cardHeaderRow}>
-          <Text style={styles.label}>Pending Invites</Text>
+          <View style={styles.labelWithIcon}>
+            <AppIcon name="UserPlus" size={18} color={colors.textSecondary} />
+            <Text style={styles.label}>Pending Invites</Text>
+          </View>
           <Pressable style={styles.collapseButton} onPress={() => setShowPendingInvites((value) => !value)}>
             <Text style={styles.collapseButtonText}>{showPendingInvites ? 'Hide' : 'Show'}</Text>
           </Pressable>
@@ -791,7 +804,7 @@ export default function ProfileScreen() {
               onPress={() => handleAcceptInvite(invite.id)}
               disabled={acceptingInviteId === invite.id}
             >
-              <Text style={styles.inlineButtonText}>{acceptingInviteId === invite.id ? 'Joining...' : 'Accept'}</Text>
+              {renderActionLabel('UserPlus', acceptingInviteId === invite.id ? 'Joining...' : 'Accept', '#FFFFFF')}
             </Pressable>
           </View>
             ))}
@@ -837,6 +850,11 @@ const createStyles = () => StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: 4,
   },
+  labelWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -881,6 +899,15 @@ const createStyles = () => StyleSheet.create({
   },
   memberRemoveButtonText: {
     color: colors.danger,
+    fontWeight: '700',
+  },
+  actionLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  actionLabelText: {
     fontWeight: '700',
   },
   confirmBox: {

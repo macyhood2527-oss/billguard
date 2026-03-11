@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import AppIcon from '../../components/common/AppIcon';
 import ScreenContainer from '../../components/common/ScreenContainer';
 import GlassCard from '../../components/common/GlassCard';
 import StatCard from '../../components/common/StatCard';
@@ -64,19 +65,20 @@ export default function DashboardScreen() {
         <>
           <View style={styles.summaryGrid}>
             <View style={styles.gridItem}>
-              <StatCard title="Upcoming Bills" value={String(summary.upcomingCount)} tone="warning" cardStyle={styles.compactCard} />
+              <StatCard title="Upcoming Bills" value={String(summary.upcomingCount)} tone="warning" icon="Clock" cardStyle={styles.compactCard} />
             </View>
             <View style={styles.gridItem}>
-              <StatCard title="Overdue Bills" value={String(summary.overdueCount)} tone="danger" cardStyle={styles.compactCard} />
+              <StatCard title="Overdue Bills" value={String(summary.overdueCount)} tone="danger" icon="AlertCircle" cardStyle={styles.compactCard} />
             </View>
             <View style={styles.gridItem}>
-              <StatCard title="Paid Bills" value={String(summary.paidCount)} tone="success" cardStyle={styles.compactCard} />
+              <StatCard title="Paid Bills" value={String(summary.paidCount)} tone="success" icon="CheckCircle" cardStyle={styles.compactCard} />
             </View>
             <View style={styles.gridItem}>
               <StatCard
                 title="Monthly Summary"
                 value={formatCurrency(summary.monthlyObligation, currencyCode)}
                 tone="primary"
+                icon="DollarSign"
                 cardStyle={styles.compactCard}
                 valueStyle={{ color: colors.primary }}
               />
@@ -85,15 +87,24 @@ export default function DashboardScreen() {
 
           <Text style={styles.sectionTitle}>Insights</Text>
           <GlassCard style={styles.insightCard}>
-            <Text style={styles.insightLabel}>Paid This Month</Text>
+            <View style={styles.insightHeader}>
+              <Text style={styles.insightLabel}>Paid This Month</Text>
+              <AppIcon name="CheckCircle" size={20} color={colors.success} />
+            </View>
             <Text style={[styles.insightValue, { color: colors.success }]}>{formatCurrency(summary.paidThisMonthTotal, currencyCode)}</Text>
           </GlassCard>
           <GlassCard style={styles.insightCard}>
-            <Text style={styles.insightLabel}>Remaining This Month</Text>
+            <View style={styles.insightHeader}>
+              <Text style={styles.insightLabel}>Remaining This Month</Text>
+              <AppIcon name="Clock" size={20} color={colors.warning} />
+            </View>
             <Text style={[styles.insightValue, { color: colors.warning }]}>{formatCurrency(summary.remainingThisMonth, currencyCode)}</Text>
           </GlassCard>
           <GlassCard style={styles.insightCard}>
-            <Text style={styles.insightLabel}>Overdue Amount</Text>
+            <View style={styles.insightHeader}>
+              <Text style={styles.insightLabel}>Overdue Amount</Text>
+              <AppIcon name="AlertCircle" size={20} color={colors.danger} />
+            </View>
             <Text style={[styles.insightValue, { color: colors.danger }]}>{formatCurrency(summary.overdueAmount, currencyCode)}</Text>
           </GlassCard>
         </>
@@ -169,10 +180,16 @@ const createStyles = () => StyleSheet.create({
   insightCard: {
     marginBottom: 10,
   },
+  insightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 6,
+  },
   insightLabel: {
     color: colors.textSecondary,
     fontSize: 13,
-    marginBottom: 6,
   },
   insightValue: {
     fontWeight: '800',

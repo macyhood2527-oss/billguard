@@ -1,14 +1,14 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
+import AppIcon from '../../../components/common/AppIcon';
 import { colors } from '../../../constants/colors';
 import { useTheme } from '../../../hooks/ThemeProvider';
 
 const iconByRoute = {
-  dashboard: 'home-outline',
-  bills: 'receipt-outline',
-  'add-bill': 'add-circle-outline',
-  'payment-history': 'time-outline',
-  profile: 'person-outline',
+  dashboard: 'LayoutDashboard',
+  bills: 'Receipt',
+  'add-bill': 'PlusCircle',
+  'payment-history': 'CreditCard',
+  profile: 'User',
 };
 
 export default function TabLayout() {
@@ -33,7 +33,7 @@ export default function TabLayout() {
           paddingTop: 6,
         },
         tabBarIcon: ({ color, size }) => (
-          <Ionicons name={iconByRoute[route.name] ?? 'ellipse-outline'} size={size} color={color} />
+          <AppIcon name={iconByRoute[route.name] ?? 'User'} size={Math.max(18, Math.min(22, size))} color={color} />
         ),
       })}
     >
